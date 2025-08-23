@@ -1,0 +1,74 @@
+# Production-optimized Dockerfile for FitnessPro Backend
+# Rename this file to Dockerfile.prod for use
+
+FROM oven/bun:1-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
+
+# Copy package files
+COPY package.json bun.lock* ./
+
+# Install dependencies with production optimizations
+RUN bun install --frozen-lockfile --production=false
+
+# Copy source code
+COPY . .
+
+# Generate Prisma client
+RUN bunx prisma generate
+
+# Build the application
+RUN bun run build
+
+# Remove dev dependencies
+RUN bun install --frozen-lockfile --production=true
+
+# Production stage
+FROM oven/bun:1-alpine AS production
+
+# Install security updates and required packages
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init curl ca-certificates && \
+    rm -rf /var/cache/apk/*
+
+# Create app directory
+WORKDIR /app
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nestjs -u 1001
+
+# Copy built application from builder stage
+COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nestjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
+
+# Create necessary directories
+RUN mkdir -p uploads logs && \
+    chown -R nestjs:nodejs uploads logs
+
+# Switch to non-root user
+USER nestjs
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8000/api/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["bun", "run", "start:prod"]
+
+# Labels for better container management
+LABEL maintainer="FitnessPro Team"
+LABEL version="1.0.0"
+LABEL description="FitnessPro Backend API - Production"

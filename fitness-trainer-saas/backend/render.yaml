@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: fitnesspro-backend
+    runtime: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: fitness-trainer-saas/backend
+    buildCommand: bun install && bun run build && bunx prisma generate
+    startCommand: bunx prisma db push && bun run db:seed && bun run start:prod
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fitnesspro-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://fitnesspro-app.netlify.app
+    autoDeploy: true
+
+# Database Configuration
+databases:
+  - name: fitnesspro-db
+    databaseName: fitness_pro_production
+    user: fitness_pro_user
+    region: oregon
+    plan: free
+
+    # Backup Configuration
+    backup:
+      enabled: true
+      schedule: daily
+      retentionDays: 7
+
+    # Connection settings
+    maxConnections: 50

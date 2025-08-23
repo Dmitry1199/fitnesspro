@@ -1,0 +1,51 @@
+[build]
+  command = "bun install && bunx prisma generate && bun run build"
+  publish = "dist"
+  base = "."
+
+[build.environment]
+  NODE_ENV = "production"
+  NPM_FLAGS = "--production=false"
+
+# API Routes
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Health check endpoint
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+# CORS headers for API
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+    Access-Control-Max-Age = "86400"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# Environment variables (set in Netlify dashboard)
+[context.production.environment]
+  NODE_ENV = "production"
+  DATABASE_URL = "postgresql://fitness_pro_user:password@host:5432/fitness_pro_production"
+  JWT_SECRET = "fp_super_secure_jwt_secret_2024_production_render_deployment_v1"
+
+[context.deploy-preview.environment]
+  NODE_ENV = "preview"
+
+[context.branch-deploy.environment]
+  NODE_ENV = "development"
