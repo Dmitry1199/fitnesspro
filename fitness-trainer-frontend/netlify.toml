@@ -1,5 +1,10 @@
 [images]
-  remote_images = ["https://source.unsplash.com/.*", "https://images.unsplash.com/.*", "https://ext.same-assets.com/.*", "https://ugc.same-assets.com/.*"]
+  remote_images = [
+    "https://source.unsplash.com/.*",
+    "https://images.unsplash.com/.*",
+    "https://ext.same-assets.com/.*",
+    "https://ugc.same-assets.com/.*"
+  ]
 
 [build]
   command = "bun run build"
@@ -13,12 +18,7 @@
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Production environment (to be updated with actual Railway URL)
+# Production environment
 [context.production.environment]
   NEXT_PUBLIC_API_URL = "https://fitnesspro-backend-production.up.railway.app/api"
   NEXT_PUBLIC_APP_ENV = "production"
