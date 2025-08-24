@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { WorkoutForm } from './workout-form';
 import { SessionForm } from './session-form';
-import { SubscriptionBilling } from '../payments/subscription-billing';
+import { LiqPaySubscriptionBilling } from '../payments/liqpay-subscription-billing';
 import { toast } from 'sonner';
 import {
   BarChart3,
@@ -565,7 +565,7 @@ export function TrainerDashboard() {
               </div>
             </div>
 
-            <SubscriptionBilling />
+            <LiqPaySubscriptionBilling />
           </TabsContent>
 
           {/* Clients Tab */}

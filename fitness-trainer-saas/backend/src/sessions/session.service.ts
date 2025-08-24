@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { TrainerAvailability, TrainingSession, SessionBooking } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { TrainingSession, SessionBooking, TrainerAvailability } from '@prisma/client';
 import { CreateSessionDto, CreateAvailabilityDto, BookSessionDto } from './dto/create-session.dto';
 
 @Injectable()

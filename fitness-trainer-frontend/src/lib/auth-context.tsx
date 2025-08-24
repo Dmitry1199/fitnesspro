@@ -1,59 +1,54 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { apiClient, User } from './api';
 
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
-  login: (type: 'trainer' | 'client' | 'admin') => Promise<void>;
-  loginWithEmail: (email: string, password?: string) => Promise<void>;
+  login: (email: string, password?: string) => Promise<{ user: User; accessToken: string }>;
   logout: () => void;
-  isTrainer: boolean;
-  isClient: boolean;
-  isAdmin: boolean;
+  quickLogin: (type?: 'trainer' | 'client' | 'admin') => Promise<{ user: User; accessToken: string }>;
+  isLoading: boolean;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in on component mount
+    // Check if user is already authenticated on mount
     const token = localStorage.getItem('fitnesspro_token');
     if (token) {
-      // Try to get user info with existing token
+      apiClient.setToken(token);
+      // You could verify the token here by making a profile request
       setIsLoading(false);
     } else {
       setIsLoading(false);
     }
   }, []);
 
-  const login = async (type: 'trainer' | 'client' | 'admin') => {
+  const login = async (email: string, password?: string) => {
     try {
-      setIsLoading(true);
-      const response = await apiClient.quickLogin(type);
+      const response = await apiClient.login(email, password);
       setUser(response.user);
+      return response;
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const loginWithEmail = async (email: string, password?: string) => {
+  const quickLogin = async (type: 'trainer' | 'client' | 'admin' = 'trainer') => {
     try {
-      setIsLoading(true);
-      const response = await apiClient.login(email, password);
+      const response = await apiClient.quickLogin(type);
       setUser(response.user);
+      return response;
     } catch (error) {
-      console.error('Login with email failed:', error);
+      console.error('Quick login failed:', error);
       throw error;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -62,19 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  const value: AuthContextType = {
-    user,
-    isLoading,
-    login,
-    loginWithEmail,
-    logout,
-    isTrainer: user?.role === 'TRAINER',
-    isClient: user?.role === 'CLIENT',
-    isAdmin: user?.role === 'ADMIN',
-  };
+  const isAuthenticated = !!user;
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        quickLogin,
+        isLoading,
+        isAuthenticated,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

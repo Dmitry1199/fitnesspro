@@ -5,6 +5,7 @@ import ClientBody from "./ClientBody";
 import Script from "next/script";
 import { AuthProvider } from "@/lib/auth-context";
 import { Toaster } from "@/components/ui/sonner";
+import { ThemeProvider } from "next-themes";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,12 +36,14 @@ export default function RootLayout({
         />
       </head>
       <body suppressHydrationWarning className="antialiased">
-        <AuthProvider>
-          <ClientBody>
-            {children}
-            <Toaster />
-          </ClientBody>
-        </AuthProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <AuthProvider>
+            <ClientBody>
+              {children}
+              <Toaster />
+            </ClientBody>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

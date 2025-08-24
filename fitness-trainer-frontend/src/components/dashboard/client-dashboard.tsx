@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient, TrainingSession, Exercise } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { SessionPaymentDialog } from '../payments/session-payment';
+import { LiqPaySessionPaymentDialog } from '../payments/liqpay-session-payment';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -540,7 +540,7 @@ export function ClientDashboard() {
 
       {/* Session Payment Dialog */}
       {selectedSessionId && (
-        <SessionPaymentDialog
+        <LiqPaySessionPaymentDialog
           sessionId={selectedSessionId}
           open={showPaymentDialog}
           onOpenChange={setShowPaymentDialog}

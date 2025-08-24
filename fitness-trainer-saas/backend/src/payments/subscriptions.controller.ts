@@ -17,12 +17,11 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
-import { SubscriptionsService } from './subscriptions.service';
+import { LiqPaySubscriptionsService } from './liqpay-subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 class CreateSubscriptionDto {
   planId: string;
-  paymentMethodId: string;
 }
 
 class UpdateSubscriptionDto {
@@ -33,22 +32,27 @@ class CancelSubscriptionDto {
   immediately?: boolean;
 }
 
+class LiqPaySubscriptionCallbackDto {
+  data: string;
+  signature: string;
+}
+
 @ApiTags('Subscriptions')
 @Controller('subscriptions')
 export class SubscriptionsController {
-  constructor(private readonly subscriptionsService: SubscriptionsService) {}
+  constructor(private readonly liqpaySubscriptionsService: LiqPaySubscriptionsService) {}
 
   @Get('plans')
-  @ApiOperation({ summary: 'Get available subscription plans' })
+  @ApiOperation({ summary: 'Get available subscription plans in UAH' })
   @ApiResponse({ status: 200, description: 'Subscription plans retrieved successfully' })
   async getSubscriptionPlans() {
-    return this.subscriptionsService.getSubscriptionPlans();
+    return this.liqpaySubscriptionsService.getSubscriptionPlans();
   }
 
   @Post('create')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create subscription for trainer' })
+  @ApiOperation({ summary: 'Create LiqPay subscription for trainer' })
   @ApiResponse({ status: 201, description: 'Subscription created successfully' })
   @ApiResponse({ status: 400, description: 'Subscription creation failed' })
   @ApiBody({ type: CreateSubscriptionDto })
@@ -60,17 +64,16 @@ export class SubscriptionsController {
       throw new BadRequestException('Only trainers can create subscriptions');
     }
 
-    return this.subscriptionsService.createSubscription(
+    return this.liqpaySubscriptionsService.createSubscription(
       req.user.sub,
       createSubscriptionDto.planId,
-      createSubscriptionDto.paymentMethodId,
     );
   }
 
   @Put('update')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update trainer subscription plan' })
+  @ApiOperation({ summary: 'Update trainer LiqPay subscription plan' })
   @ApiResponse({ status: 200, description: 'Subscription updated successfully' })
   @ApiResponse({ status: 400, description: 'Subscription update failed' })
   @ApiResponse({ status: 404, description: 'No active subscription found' })
@@ -83,7 +86,7 @@ export class SubscriptionsController {
       throw new BadRequestException('Only trainers can update subscriptions');
     }
 
-    return this.subscriptionsService.updateSubscription(
+    return this.liqpaySubscriptionsService.updateSubscription(
       req.user.sub,
       updateSubscriptionDto.planId,
     );
@@ -92,7 +95,7 @@ export class SubscriptionsController {
   @Delete('cancel')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cancel trainer subscription' })
+  @ApiOperation({ summary: 'Cancel trainer LiqPay subscription' })
   @ApiResponse({ status: 200, description: 'Subscription cancelled successfully' })
   @ApiResponse({ status: 400, description: 'Subscription cancellation failed' })
   @ApiResponse({ status: 404, description: 'No active subscription found' })
@@ -105,7 +108,7 @@ export class SubscriptionsController {
       throw new BadRequestException('Only trainers can cancel subscriptions');
     }
 
-    return this.subscriptionsService.cancelSubscription(
+    return this.liqpaySubscriptionsService.cancelSubscription(
       req.user.sub,
       cancelDto.immediately || false,
     );
@@ -121,7 +124,7 @@ export class SubscriptionsController {
       throw new BadRequestException('Only trainers can view subscription details');
     }
 
-    return this.subscriptionsService.getTrainerSubscription(req.user.sub);
+    return this.liqpaySubscriptionsService.getTrainerSubscription(req.user.sub);
   }
 
   @Get('usage')
@@ -134,29 +137,27 @@ export class SubscriptionsController {
       throw new BadRequestException('Only trainers can view usage details');
     }
 
-    return this.subscriptionsService.getSubscriptionUsage(req.user.sub);
+    return this.liqpaySubscriptionsService.getSubscriptionUsage(req.user.sub);
   }
 
-  @Post('portal')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create Stripe customer portal session' })
-  @ApiResponse({ status: 200, description: 'Portal session created successfully' })
-  @ApiResponse({ status: 400, description: 'Portal session creation failed' })
-  async createPortalSession(@Request() req) {
-    if (req.user.role !== 'TRAINER') {
-      throw new BadRequestException('Only trainers can access billing portal');
-    }
-
-    return this.subscriptionsService.createPortalSession(req.user.sub);
+  @Post('liqpay/callback')
+  @ApiOperation({ summary: 'Handle LiqPay subscription callback' })
+  @ApiResponse({ status: 200, description: 'Callback processed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid callback data' })
+  @ApiBody({ type: LiqPaySubscriptionCallbackDto })
+  async handleSubscriptionCallback(@Body() callbackDto: LiqPaySubscriptionCallbackDto) {
+    return this.liqpaySubscriptionsService.handleSubscriptionCallback(
+      callbackDto.data,
+      callbackDto.signature,
+    );
   }
 
   @Get('features/:planId')
-  @ApiOperation({ summary: 'Get features for a specific plan' })
+  @ApiOperation({ summary: 'Get features for a specific Ukrainian plan' })
   @ApiResponse({ status: 200, description: 'Plan features retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Plan not found' })
   async getPlanFeatures(@Param('planId') planId: string) {
-    const plans = this.subscriptionsService.getSubscriptionPlans();
+    const plans = this.liqpaySubscriptionsService.getSubscriptionPlans();
     const plan = plans.find(p => p.id === planId);
 
     if (!plan) {
@@ -167,7 +168,16 @@ export class SubscriptionsController {
       planId: plan.id,
       features: plan.features,
       price: plan.price,
+      currency: plan.currency,
       interval: plan.interval,
     };
+  }
+
+  @Get('check-status/:orderId')
+  @ApiOperation({ summary: 'Check LiqPay subscription status' })
+  @ApiResponse({ status: 200, description: 'Subscription status retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Status check failed' })
+  async checkSubscriptionStatus(@Param('orderId') orderId: string) {
+    return this.liqpaySubscriptionsService.checkSubscriptionStatus(orderId);
   }
 }

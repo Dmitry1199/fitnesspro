@@ -4,153 +4,210 @@ import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { Dumbbell, Users, Shield, ArrowRight, Zap, Calendar, TrendingUp } from 'lucide-react';
-
-interface UserRole {
-  type: 'trainer' | 'client' | 'admin';
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-  features: string[];
-  color: string;
-}
-
-const USER_ROLES: UserRole[] = [
-  {
-    type: 'trainer',
-    title: 'Fitness Trainer',
-    description: 'Manage workouts, schedule sessions, and train clients',
-    icon: <Dumbbell className="h-8 w-8" />,
-    features: ['Create workout plans', 'Manage client sessions', 'Track client progress', 'Set availability'],
-    color: 'bg-blue-500 hover:bg-blue-600',
-  },
-  {
-    type: 'client',
-    title: 'Client',
-    description: 'Book sessions, follow workouts, and track your progress',
-    icon: <Users className="h-8 w-8" />,
-    features: ['Browse trainers', 'Book training sessions', 'Access workout library', 'Track your progress'],
-    color: 'bg-green-500 hover:bg-green-600',
-  },
-  {
-    type: 'admin',
-    title: 'Administrator',
-    description: 'Manage the platform, users, and system settings',
-    icon: <Shield className="h-8 w-8" />,
-    features: ['User management', 'System analytics', 'Platform configuration', 'Support tools'],
-    color: 'bg-purple-500 hover:bg-purple-600',
-  },
-];
+import {
+  Dumbbell,
+  User,
+  UserCheck,
+  Shield,
+  Loader2,
+  Mail,
+  Lock,
+} from 'lucide-react';
 
 export function LoginPage() {
-  const { login } = useAuth();
+  const { quickLogin } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleLogin = async (role: 'trainer' | 'client' | 'admin') => {
+  const handleQuickLogin = async (type: 'trainer' | 'client' | 'admin') => {
     try {
       setIsLoading(true);
-      await login(role);
-      toast.success(`Welcome! Logged in as ${role}`);
+      await quickLogin(type);
+      toast.success(`Вхід як ${type === 'trainer' ? 'тренер' : type === 'client' ? 'клієнт' : 'адміністратор'}!`);
     } catch (error) {
-      toast.error('Login failed. Please try again.');
-      console.error('Login error:', error);
+      console.error('Quick login failed:', error);
+      toast.error('Помилка входу в систему');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error('Введіть email адресу');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      // For demo purposes, redirect to quick login based on email domain
+      if (email.includes('trainer')) {
+        await quickLogin('trainer');
+        toast.success('Вхід як тренер!');
+      } else if (email.includes('admin')) {
+        await quickLogin('admin');
+        toast.success('Вхід як адміністратор!');
+      } else {
+        await quickLogin('client');
+        toast.success('Вхід як клієнт!');
+      }
+    } catch (error) {
+      console.error('Email login failed:', error);
+      toast.error('Помилка входу в систему');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Header */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <div className="bg-primary text-primary-foreground p-3 rounded-lg mr-3">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-yellow-50 flex items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-8">
+        {/* Header */}
+        <div className="text-center">
+          <div className="flex items-center justify-center mb-6">
+            <div className="bg-gradient-to-r from-blue-600 to-yellow-500 text-white p-3 rounded-xl">
               <Dumbbell className="h-8 w-8" />
             </div>
-            <h1 className="text-4xl font-bold text-foreground">FitnessPro</h1>
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            The complete fitness training platform connecting trainers and clients
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">FitnessPro</h1>
+          <p className="text-sm text-gray-600 mt-2">🇺🇦 Українська фітнес платформа</p>
+          <p className="text-xs text-gray-500 mt-1">Професійна платформа для тренерів та клієнтів</p>
         </div>
 
-        {/* Features Banner */}
-        <div className="flex justify-center mb-12">
-          <div className="flex flex-wrap gap-4 items-center">
-            <Badge variant="secondary" className="text-sm py-2 px-4">
-              <Zap className="h-4 w-4 mr-2" />
-              Workout Management
-            </Badge>
-            <Badge variant="secondary" className="text-sm py-2 px-4">
-              <Calendar className="h-4 w-4 mr-2" />
-              Session Booking
-            </Badge>
-            <Badge variant="secondary" className="text-sm py-2 px-4">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Progress Tracking
-            </Badge>
-          </div>
-        </div>
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="text-center pb-4">
+            <CardTitle>Вхід в систему</CardTitle>
+            <CardDescription>
+              Оберіть тип облікового запису для входу
+            </CardDescription>
+          </CardHeader>
 
-        {/* Role Selection */}
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-semibold text-center mb-8">Choose Your Role</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {USER_ROLES.map((role) => (
-              <Card key={role.type} className="relative overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                <CardHeader className="text-center pb-4">
-                  <div className="flex justify-center mb-4">
-                    <div className={`p-4 rounded-full text-white ${role.color.split(' ')[0]}`}>
-                      {role.icon}
-                    </div>
-                  </div>
-                  <CardTitle className="text-xl">{role.title}</CardTitle>
-                  <CardDescription className="text-sm">
-                    {role.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    {role.features.map((feature, index) => (
-                      <div key={index} className="flex items-center text-sm text-muted-foreground">
-                        <ArrowRight className="h-4 w-4 mr-2 text-primary" />
-                        {feature}
-                      </div>
-                    ))}
-                  </div>
-                  <Button
-                    onClick={() => handleLogin(role.type)}
+          <CardContent className="space-y-6">
+            {/* Quick Login Options */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-gray-700">Швидкий вхід (демо):</h3>
+
+              <Button
+                onClick={() => handleQuickLogin('trainer')}
+                disabled={isLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                size="lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <UserCheck className="h-4 w-4 mr-2" />
+                )}
+                Увійти як Тренер
+              </Button>
+
+              <Button
+                onClick={() => handleQuickLogin('client')}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full border-blue-200 hover:bg-blue-50"
+                size="lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <User className="h-4 w-4 mr-2" />
+                )}
+                Увійти як Клієнт
+              </Button>
+
+              <Button
+                onClick={() => handleQuickLogin('admin')}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full border-gray-200 hover:bg-gray-50"
+                size="lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Shield className="h-4 w-4 mr-2" />
+                )}
+                Увійти як Адміністратор
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* Email Login Form */}
+            <form onSubmit={handleEmailLogin} className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-700">Вхід з email:</h3>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email адреса</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="trainer@fitnesspro.ua"
+                    className="pl-10"
                     disabled={isLoading}
-                    className={`w-full ${role.color} text-white border-0`}
-                  >
-                    {isLoading ? 'Logging in...' : `Login as ${role.title}`}
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+                  />
+                </div>
+              </div>
 
-        {/* Demo Notice */}
-        <div className="text-center mt-12">
-          <Card className="max-w-2xl mx-auto bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800">
-            <CardContent className="pt-6">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>Demo Mode:</strong> This is a demonstration platform with sample data.
-                Choose any role to explore the features. No registration required!
+              <div className="space-y-2">
+                <Label htmlFor="password">Пароль (опціонально)</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Введіть пароль"
+                    className="pl-10"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
+                size="lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-2" />
+                )}
+                Увійти з Email
+              </Button>
+            </form>
+
+            {/* Demo Info */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800 text-center">
+                <strong>Демо-платформа:</strong> Використовуйте швидкий вхід для тестування.<br />
+                Email підказки: trainer@*, client@*, admin@*
               </p>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* API Status */}
-        <div className="text-center mt-8">
-          <p className="text-xs text-muted-foreground">
-            Backend API: <span className="text-green-600 font-medium">Connected</span> •
-            39 endpoints available
+        {/* Footer */}
+        <div className="text-center">
+          <p className="text-xs text-gray-500">
+            FitnessPro © 2024 - Українська фітнес платформа з LiqPay інтеграцією
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Підтримка українських гривень та локальних банків
           </p>
         </div>
       </div>

@@ -137,33 +137,7 @@ class ApiClient {
     }
   }
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
-    };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-  }
 
   // Authentication
   async quickLogin(type: 'trainer' | 'client' | 'admin' = 'trainer') {
@@ -458,20 +432,41 @@ class ApiClient {
     return this.request('/sessions/stats');
   }
 
-  // Payment & Billing
+  // Public generic request method
+  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options.headers as Record<string, string>),
+    };
+
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      ...options,
+      headers,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // Payment & Billing (LiqPay)
   async createSessionPaymentIntent(sessionId: string) {
-    return this.request('/payments/session/create-intent', {
+    return this.request('/payments/session/create', {
       method: 'POST',
       body: JSON.stringify({ sessionId }),
     });
   }
 
-  async confirmSessionPayment(paymentIntentId: string) {
-    return this.request('/payments/session/confirm', {
-      method: 'POST',
-      body: JSON.stringify({ paymentIntentId }),
-    });
-  }
+
 
   async refundSessionPayment(sessionId: string, reason?: string) {
     return this.request('/payments/session/refund', {
@@ -494,10 +489,10 @@ class ApiClient {
     return this.request('/subscriptions/plans');
   }
 
-  async createSubscription(planId: string, paymentMethodId: string) {
+  async createSubscription(planId: string, paymentMethodId?: string) {
     return this.request('/subscriptions/create', {
       method: 'POST',
-      body: JSON.stringify({ planId, paymentMethodId }),
+      body: JSON.stringify({ planId }),
     });
   }
 
@@ -523,10 +518,12 @@ class ApiClient {
     return this.request('/subscriptions/usage');
   }
 
-  async createBillingPortalSession() {
-    return this.request('/subscriptions/portal', {
-      method: 'POST',
-    });
+  async checkPaymentStatus(orderId: string) {
+    return this.request(`/payments/check-status/${orderId}`);
+  }
+
+  async checkSubscriptionStatus(orderId: string) {
+    return this.request(`/subscriptions/check-status/${orderId}`);
   }
 }
 

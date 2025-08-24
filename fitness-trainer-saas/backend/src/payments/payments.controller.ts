@@ -17,15 +17,16 @@ import {
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
-import { PaymentsService } from './payments.service';
+import { LiqPayService } from './liqpay.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 class CreateSessionPaymentDto {
   sessionId: string;
 }
 
-class ConfirmPaymentDto {
-  paymentIntentId: string;
+class LiqPayCallbackDto {
+  data: string;
+  signature: string;
 }
 
 class RefundPaymentDto {
@@ -33,24 +34,20 @@ class RefundPaymentDto {
   reason?: string;
 }
 
-class CreateConnectAccountDto {
-  email: string;
-}
-
 @ApiTags('Payments')
 @Controller('payments')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth()
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly liqpayService: LiqPayService) {}
 
-  @Post('session/create-intent')
-  @ApiOperation({ summary: 'Create payment intent for session booking' })
-  @ApiResponse({ status: 201, description: 'Payment intent created successfully' })
+  @Post('session/create')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create LiqPay payment for session booking' })
+  @ApiResponse({ status: 201, description: 'LiqPay payment created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'Session not found' })
   @ApiBody({ type: CreateSessionPaymentDto })
-  async createSessionPaymentIntent(
+  async createSessionPayment(
     @Body() createPaymentDto: CreateSessionPaymentDto,
     @Request() req,
   ) {
@@ -58,25 +55,28 @@ export class PaymentsController {
       throw new BadRequestException('Only clients can make session payments');
     }
 
-    return this.paymentsService.createSessionPaymentIntent(
+    return this.liqpayService.createSessionPayment(
       createPaymentDto.sessionId,
       req.user.sub,
     );
   }
 
-  @Post('session/confirm')
-  @ApiOperation({ summary: 'Confirm session payment' })
-  @ApiResponse({ status: 200, description: 'Payment confirmed successfully' })
-  @ApiResponse({ status: 400, description: 'Payment confirmation failed' })
-  @ApiBody({ type: ConfirmPaymentDto })
-  async confirmSessionPayment(@Body() confirmPaymentDto: ConfirmPaymentDto) {
-    return this.paymentsService.confirmSessionPayment(
-      confirmPaymentDto.paymentIntentId,
+  @Post('liqpay/callback')
+  @ApiOperation({ summary: 'Handle LiqPay payment callback' })
+  @ApiResponse({ status: 200, description: 'Callback processed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid callback data' })
+  @ApiBody({ type: LiqPayCallbackDto })
+  async handleLiqPayCallback(@Body() callbackDto: LiqPayCallbackDto) {
+    return this.liqpayService.handleLiqPayCallback(
+      callbackDto.data,
+      callbackDto.signature,
     );
   }
 
   @Post('session/refund')
-  @ApiOperation({ summary: 'Refund session payment' })
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Refund session payment via LiqPay' })
   @ApiResponse({ status: 200, description: 'Payment refunded successfully' })
   @ApiResponse({ status: 400, description: 'Refund failed' })
   @ApiResponse({ status: 404, description: 'Payment not found' })
@@ -90,20 +90,24 @@ export class PaymentsController {
       throw new BadRequestException('Insufficient permissions for refunds');
     }
 
-    return this.paymentsService.refundSessionPayment(
+    return this.liqpayService.refundSessionPayment(
       refundDto.sessionId,
       refundDto.reason,
     );
   }
 
   @Get('history')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payment history for user' })
   @ApiResponse({ status: 200, description: 'Payment history retrieved successfully' })
   async getPaymentHistory(@Request() req) {
-    return this.paymentsService.getPaymentHistory(req.user.sub, req.user.role);
+    return this.liqpayService.getPaymentHistory(req.user.sub, req.user.role);
   }
 
   @Get('stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Get payment statistics' })
   @ApiResponse({ status: 200, description: 'Payment statistics retrieved successfully' })
   @ApiQuery({ name: 'trainerId', required: false, description: 'Filter by trainer ID (admin only)' })
@@ -111,53 +115,14 @@ export class PaymentsController {
     // If user is trainer, only show their stats
     const targetTrainerId = req.user.role === 'TRAINER' ? req.user.sub : trainerId;
 
-    return this.paymentsService.getPaymentStats(targetTrainerId);
+    return this.liqpayService.getPaymentStats(targetTrainerId);
   }
 
-  @Post('connect/create-account')
-  @ApiOperation({ summary: 'Create Stripe Connect account for trainer' })
-  @ApiResponse({ status: 201, description: 'Connect account created successfully' })
-  @ApiResponse({ status: 400, description: 'Account creation failed' })
-  @ApiBody({ type: CreateConnectAccountDto })
-  async createConnectAccount(
-    @Body() createAccountDto: CreateConnectAccountDto,
-    @Request() req,
-  ) {
-    if (req.user.role !== 'TRAINER') {
-      throw new BadRequestException('Only trainers can create Connect accounts');
-    }
-
-    return this.paymentsService.createConnectAccount(
-      req.user.sub,
-      createAccountDto.email,
-    );
-  }
-
-  @Post('connect/account-link/:stripeAccountId')
-  @ApiOperation({ summary: 'Create Stripe Connect account link' })
-  @ApiResponse({ status: 200, description: 'Account link created successfully' })
-  @ApiResponse({ status: 400, description: 'Link creation failed' })
-  async createConnectAccountLink(
-    @Param('stripeAccountId') stripeAccountId: string,
-    @Request() req,
-  ) {
-    if (req.user.role !== 'TRAINER') {
-      throw new BadRequestException('Only trainers can access Connect account links');
-    }
-
-    return this.paymentsService.createConnectAccountLink(stripeAccountId);
-  }
-
-  @Get('connect/account-status')
-  @ApiOperation({ summary: 'Get Stripe Connect account status' })
-  @ApiResponse({ status: 200, description: 'Account status retrieved successfully' })
-  async getConnectAccountStatus(@Request() req) {
-    if (req.user.role !== 'TRAINER') {
-      throw new BadRequestException('Only trainers can check Connect account status');
-    }
-
-    // This would check if trainer has a connected Stripe account
-    // Implementation depends on how you store the Connect account info
-    return { message: 'Connect account status endpoint' };
+  @Get('check-status/:orderId')
+  @ApiOperation({ summary: 'Check LiqPay payment status' })
+  @ApiResponse({ status: 200, description: 'Payment status retrieved successfully' })
+  @ApiResponse({ status: 400, description: 'Status check failed' })
+  async checkPaymentStatus(@Param('orderId') orderId: string) {
+    return this.liqpayService.checkPaymentStatus(orderId);
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
 import { ExerciseCategory, MuscleGroup, Equipment } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
 
 export interface CreateCategoryDto {
   name: string;

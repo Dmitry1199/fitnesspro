@@ -8,25 +8,25 @@ import { AdminDashboard } from '@/components/dashboard/admin-dashboard';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export default function HomePage() {
-  const { user, isLoading, isTrainer, isClient, isAdmin } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return <LoadingSpinner />;
   }
 
-  if (!user) {
+  if (!user || !isAuthenticated) {
     return <LoginPage />;
   }
 
-  if (isTrainer) {
+  if (user.role === 'TRAINER') {
     return <TrainerDashboard />;
   }
 
-  if (isClient) {
+  if (user.role === 'CLIENT') {
     return <ClientDashboard />;
   }
 
-  if (isAdmin) {
+  if (user.role === 'ADMIN') {
     return <AdminDashboard />;
   }
 

@@ -39,9 +39,8 @@ model User {
   country          String?
   postalCode       String?
 
-  // Stripe and subscription fields
-  stripeCustomerId    String?  @unique
-  stripeAccountId     String?  @unique // For trainers using Stripe Connect
+  // LiqPay and subscription fields
+  liqpayCustomerId    String?  @unique
   subscriptionPlan    String?  // basic, pro, premium
   subscriptionStatus  String?  // active, canceled, past_due, etc.
 
@@ -340,10 +339,10 @@ model Payment {
   type                  String @default("SESSION_PAYMENT") // SESSION_PAYMENT, SUBSCRIPTION_PAYMENT
   status                String @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
 
-  // Stripe integration
-  stripePaymentIntentId String? @unique
-  stripeChargeId        String?
-  stripeRefundId        String?
+  // LiqPay integration
+  liqpayOrderId         String? @unique
+  liqpayTransactionId   String?
+  liqpayRefundId        String?
 
   // Refund information
   refundedAt            DateTime?
@@ -372,9 +371,9 @@ model Subscription {
   interval              String // month, year
   status                String @default("active") // active, canceled, past_due, trialing
 
-  // Stripe integration
-  stripeSubscriptionId  String @unique
-  stripeCustomerId      String
+  // LiqPay integration
+  liqpaySubscriptionId  String? @unique
+  liqpayCustomerId      String?
 
   // Billing cycle
   currentPeriodStart    DateTime

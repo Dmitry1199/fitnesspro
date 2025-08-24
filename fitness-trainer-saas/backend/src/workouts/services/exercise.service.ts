@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Exercise } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateExerciseDto } from '../dto/create-exercise.dto';
 import { UpdateExerciseDto } from '../dto/update-exercise.dto';
-import { Exercise } from '@prisma/client';
 
 @Injectable()
 export class ExerciseService {
