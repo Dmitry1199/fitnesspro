@@ -1,0 +1,34 @@
+{
+  "name": "fitnesspro-backend",
+  "description": "FitnessPro Ukrainian Fitness Platform - Backend API",
+  "build": {
+    "buildCommand": "bun install && bunx prisma generate && bun run build",
+    "outputDir": "dist"
+  },
+  "deploy": {
+    "startCommand": "bunx prisma migrate deploy && bun run start:prod",
+    "healthCheck": {
+      "path": "/api/health",
+      "timeout": 100
+    }
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "PORT": "8000",
+    "JWT_SECRET": {
+      "generate": true
+    },
+    "FRONTEND_URL": "https://fitnesspro-app.netlify.app",
+    "CORS_ORIGIN": "https://fitnesspro-app.netlify.app",
+    "LIQPAY_PUBLIC_KEY": "sandbox_i74424594321",
+    "LIQPAY_PRIVATE_KEY": "sandbox_demoPrivateKey2024",
+    "LIQPAY_SANDBOX": "true",
+    "DEFAULT_CURRENCY": "UAH"
+  },
+  "services": {
+    "postgres": {
+      "plan": "free",
+      "version": "15"
+    }
+  }
+}

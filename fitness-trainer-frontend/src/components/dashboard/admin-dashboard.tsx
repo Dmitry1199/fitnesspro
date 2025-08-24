@@ -2,82 +2,62 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { apiClient, Workout, TrainingSession, Exercise } from '@/lib/api';
+import { apiClient } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import {
-  BarChart3,
-  Calendar,
-  Dumbbell,
+  Shield,
   Users,
+  Dumbbell,
+  Calendar,
+  TrendingUp,
   Settings,
   LogOut,
-  Shield,
-  TrendingUp,
+  BarChart3,
+  DollarSign,
   Activity,
-  Database,
-  Server,
-  Globe,
-  UserCheck,
-  AlertCircle,
 } from 'lucide-react';
 
-interface SystemStats {
+interface AdminStats {
   totalUsers: number;
   totalTrainers: number;
   totalClients: number;
-  totalWorkouts: number;
   totalSessions: number;
-  totalExercises: number;
-  systemHealth: string;
+  totalPayments: number;
+  totalRevenue: number;
 }
 
 export function AdminDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [sessions, setSessions] = useState<TrainingSession[]>([]);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [stats, setStats] = useState<SystemStats | null>(null);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
+    loadAdminData();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadAdminData = async () => {
     try {
       setIsLoading(true);
-      const [workoutsData, sessionsData, exercisesData, workoutStats, sessionStats] = await Promise.all([
-        apiClient.getWorkouts(),
-        apiClient.getSessions(),
-        apiClient.getExercises(),
-        apiClient.getWorkoutStats(),
-        apiClient.getSessionStats(),
-      ]);
+      // Mock admin stats - in real app would call actual admin endpoints
+      const mockStats: AdminStats = {
+        totalUsers: 1247,
+        totalTrainers: 89,
+        totalClients: 1158,
+        totalSessions: 3456,
+        totalPayments: 2891,
+        totalRevenue: 1456780, // in UAH
+      };
 
-      setWorkouts(workoutsData);
-      setSessions(sessionsData);
-      setExercises(exercisesData);
-
-      // Calculate system stats
-      setStats({
-        totalUsers: 150, // Mock data - would come from API
-        totalTrainers: 25,
-        totalClients: 125,
-        totalWorkouts: (workoutStats as any)?.totalWorkouts || workoutsData.length,
-        totalSessions: (sessionStats as any)?.totalSessions || sessionsData.length,
-        totalExercises: exercisesData.length,
-        systemHealth: 'Excellent',
-      });
+      setStats(mockStats);
     } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-      toast.error('Failed to load dashboard data');
+      console.error('Failed to load admin data:', error);
+      toast.error('Не вдалося завантажити дані адміністратора');
     } finally {
       setIsLoading(false);
     }
@@ -85,7 +65,15 @@ export function AdminDashboard() {
 
   const handleLogout = () => {
     logout();
-    toast.success('Logged out successfully');
+    toast.success('Вихід з системи успішний');
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('uk-UA', {
+      style: 'currency',
+      currency: 'UAH',
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   if (isLoading) {
@@ -103,12 +91,12 @@ export function AdminDashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="bg-primary text-primary-foreground p-2 rounded-lg">
+              <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white p-2 rounded-lg">
                 <Shield className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">FitnessPro</h1>
-                <p className="text-sm text-muted-foreground">Admin Dashboard</p>
+                <h1 className="text-2xl font-bold">FitnessPro Admin</h1>
+                <p className="text-sm text-muted-foreground">🇺🇦 Панель адміністратора</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -121,12 +109,12 @@ export function AdminDashboard() {
                 </Avatar>
                 <div className="hidden md:block">
                   <p className="text-sm font-medium">{user?.firstName} {user?.lastName}</p>
-                  <p className="text-xs text-muted-foreground">System Administrator</p>
+                  <p className="text-xs text-muted-foreground">Адміністратор системи</p>
                 </div>
               </div>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
-                Logout
+                Вихід
               </Button>
             </div>
           </div>
@@ -139,19 +127,19 @@ export function AdminDashboard() {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
-              <span>Overview</span>
+              <span>Огляд</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center space-x-2">
               <Users className="h-4 w-4" />
-              <span>User Management</span>
+              <span>Користувачі</span>
             </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center space-x-2">
-              <Database className="h-4 w-4" />
-              <span>Content</span>
+            <TabsTrigger value="analytics" className="flex items-center space-x-2">
+              <TrendingUp className="h-4 w-4" />
+              <span>Аналітика</span>
             </TabsTrigger>
-            <TabsTrigger value="system" className="flex items-center space-x-2">
-              <Server className="h-4 w-4" />
-              <span>System</span>
+            <TabsTrigger value="settings" className="flex items-center space-x-2">
+              <Settings className="h-4 w-4" />
+              <span>Налаштування</span>
             </TabsTrigger>
           </TabsList>
 
@@ -160,421 +148,161 @@ export function AdminDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <CardTitle className="text-sm font-medium">Всього користувачів</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    +12% from last month
+                    Зареєстровані користувачі
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Workouts</CardTitle>
+                  <CardTitle className="text-sm font-medium">Тренери</CardTitle>
                   <Dumbbell className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats?.totalWorkouts || 0}</div>
+                  <div className="text-2xl font-bold">{stats?.totalTrainers || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Created by trainers
+                    Активні тренери
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+                  <CardTitle className="text-sm font-medium">Всього сесій</CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats?.totalSessions || 0}</div>
                   <p className="text-xs text-muted-foreground">
-                    Scheduled and completed
+                    Проведені тренування
                   </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">System Health</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Загальний дохід</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{stats?.systemHealth}</div>
+                  <div className="text-2xl font-bold">
+                    {stats?.totalRevenue ? formatCurrency(stats.totalRevenue) : '₴0'}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    All systems operational
+                    Через LiqPay
                   </p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* System Status */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Platform Statistics</CardTitle>
-                  <CardDescription>Key metrics and performance</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Active Trainers</p>
-                      <p className="text-xs text-muted-foreground">{stats?.totalTrainers} total</p>
-                    </div>
-                    <div className="text-right">
-                      <Progress value={85} className="w-20 h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">85% active</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Active Clients</p>
-                      <p className="text-xs text-muted-foreground">{stats?.totalClients} total</p>
-                    </div>
-                    <div className="text-right">
-                      <Progress value={72} className="w-20 h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">72% active</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Exercise Library</p>
-                      <p className="text-xs text-muted-foreground">{stats?.totalExercises} exercises</p>
-                    </div>
-                    <div className="text-right">
-                      <Progress value={95} className="w-20 h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">95% complete</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
-                  <CardDescription>Latest platform activity</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-green-100 p-2 rounded-full">
-                      <UserCheck className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">New trainer registered</p>
-                      <p className="text-xs text-muted-foreground">2 minutes ago</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-blue-100 p-2 rounded-full">
-                      <Dumbbell className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Workout created</p>
-                      <p className="text-xs text-muted-foreground">15 minutes ago</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-purple-100 p-2 rounded-full">
-                      <Calendar className="h-4 w-4 text-purple-600" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Session booked</p>
-                      <p className="text-xs text-muted-foreground">1 hour ago</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-orange-100 p-2 rounded-full">
-                      <TrendingUp className="h-4 w-4 text-orange-600" />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Performance metrics updated</p>
-                      <p className="text-xs text-muted-foreground">2 hours ago</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Users Tab */}
-          <TabsContent value="users" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium">User Management</h3>
-                <p className="text-sm text-muted-foreground">
-                  Manage trainers, clients, and user accounts
-                </p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Shield className="h-5 w-5 mr-2" />
-                    Trainers
-                  </CardTitle>
-                  <CardDescription>Certified fitness professionals</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">{stats?.totalTrainers}</div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-xs">
-                      {Math.round((stats?.totalTrainers || 0) * 0.85)} active
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      {Math.round((stats?.totalTrainers || 0) * 0.15)} pending
-                    </Badge>
-                  </div>
-                  <Button variant="outline" className="w-full mt-4" size="sm">
-                    Manage Trainers
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Users className="h-5 w-5 mr-2" />
-                    Clients
-                  </CardTitle>
-                  <CardDescription>Fitness enthusiasts and members</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">{stats?.totalClients}</div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-xs">
-                      {Math.round((stats?.totalClients || 0) * 0.72)} active
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      {Math.round((stats?.totalClients || 0) * 0.28)} inactive
-                    </Badge>
-                  </div>
-                  <Button variant="outline" className="w-full mt-4" size="sm">
-                    Manage Clients
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Settings className="h-5 w-5 mr-2" />
-                    System Users
-                  </CardTitle>
-                  <CardDescription>Administrators and support staff</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">3</div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline" className="text-xs">
-                      2 admins
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      1 support
-                    </Badge>
-                  </div>
-                  <Button variant="outline" className="w-full mt-4" size="sm">
-                    Manage Access
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
+            {/* Recent Activity */}
             <Card>
               <CardHeader>
-                <CardTitle>User Activity Overview</CardTitle>
-                <CardDescription>Recent user registrations and activity</CardDescription>
+                <CardTitle>Поточна активність платформи</CardTitle>
+                <CardDescription>
+                  Останні події в системі
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>User management interface coming soon</p>
-                  <p className="text-sm">Advanced user management features will be available in the next update</p>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">LiqPay інтеграція</p>
+                    <p className="text-xs text-muted-foreground">
+                      Українська платіжна система активна
+                    </p>
+                  </div>
+                  <Badge variant="default">Активна</Badge>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Підписки тренерів</p>
+                    <p className="text-xs text-muted-foreground">
+                      {stats?.totalTrainers || 0} активних підписок
+                    </p>
+                  </div>
+                  <Badge variant="outline">Стабільно</Badge>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Система платежів</p>
+                    <p className="text-xs text-muted-foreground">
+                      Всього {stats?.totalPayments || 0} транзакцій
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Операційна</Badge>
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Content Tab */}
-          <TabsContent value="content" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium">Content Management</h3>
-                <p className="text-sm text-muted-foreground">
-                  Manage workouts, exercises, and platform content
-                </p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Dumbbell className="h-5 w-5 mr-2" />
-                    Workouts
-                  </CardTitle>
-                  <CardDescription>Training programs and routines</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">{stats?.totalWorkouts}</div>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>Public:</span>
-                      <span>{Math.round((stats?.totalWorkouts || 0) * 0.3)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Templates:</span>
-                      <span>{Math.round((stats?.totalWorkouts || 0) * 0.4)}</span>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full mt-4" size="sm">
-                    Manage Workouts
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Database className="h-5 w-5 mr-2" />
-                    Exercises
-                  </CardTitle>
-                  <CardDescription>Exercise library and database</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">{stats?.totalExercises}</div>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>System:</span>
-                      <span>{Math.round((stats?.totalExercises || 0) * 0.7)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Custom:</span>
-                      <span>{Math.round((stats?.totalExercises || 0) * 0.3)}</span>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full mt-4" size="sm">
-                    Manage Exercises
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Sessions
-                  </CardTitle>
-                  <CardDescription>Training sessions and bookings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold mb-2">{stats?.totalSessions}</div>
-                  <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>Scheduled:</span>
-                      <span>{Math.round((stats?.totalSessions || 0) * 0.6)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Completed:</span>
-                      <span>{Math.round((stats?.totalSessions || 0) * 0.4)}</span>
-                    </div>
-                  </div>
-                  <Button variant="outline" className="w-full mt-4" size="sm">
-                    Manage Sessions
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* System Tab */}
-          <TabsContent value="system" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium">System Administration</h3>
-                <p className="text-sm text-muted-foreground">
-                  Monitor system health and performance
-                </p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Server className="h-5 w-5 mr-2" />
-                    System Status
-                  </CardTitle>
-                  <CardDescription>Current system health and metrics</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">API Server</span>
-                    <Badge className="bg-green-500">Online</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Database</span>
-                    <Badge className="bg-green-500">Healthy</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Frontend</span>
-                    <Badge className="bg-green-500">Active</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">File Storage</span>
-                    <Badge className="bg-yellow-500">Warning</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Globe className="h-5 w-5 mr-2" />
-                    Platform Info
-                  </CardTitle>
-                  <CardDescription>Version and deployment information</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Version</span>
-                    <Badge variant="outline">v1.0.0</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Environment</span>
-                    <Badge variant="outline">Development</Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Last Deploy</span>
-                    <span className="text-sm text-muted-foreground">2 hours ago</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">API Endpoints</span>
-                    <span className="text-sm text-muted-foreground">39 active</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>System Logs</CardTitle>
-                <CardDescription>Recent system events and logs</CardDescription>
+                <CardTitle>Управління користувачами</CardTitle>
+                <CardDescription>
+                  Адміністрування облікових записів та ролей
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>System monitoring dashboard coming soon</p>
-                  <p className="text-sm">Advanced monitoring and logging features will be available in the next update</p>
+                <p className="text-muted-foreground">
+                  Функції управління користувачами будуть додані в наступному оновленні.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Аналітика та звіти</CardTitle>
+                <CardDescription>
+                  Детальна аналітика використання платформи
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Розширена аналітика буде доступна в наступному оновленні.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Налаштування системи</CardTitle>
+                <CardDescription>
+                  Конфігурація платформи та інтеграцій
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">LiqPay інтеграція</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Українська платіжна система підключена
+                    </p>
+                    <Badge variant="default">Підключено</Badge>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Валюта платформи</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Українська гривня (UAH)
+                    </p>
+                    <Badge variant="outline">UAH</Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>

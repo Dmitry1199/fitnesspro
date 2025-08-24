@@ -18,6 +18,21 @@
   to = "/index.html"
   status = 200
 
+# Production environment (to be updated with actual Railway URL)
 [context.production.environment]
-  NEXT_PUBLIC_API_URL = "https://fitnesspro-backend.onrender.com/api"
+  NEXT_PUBLIC_API_URL = "https://fitnesspro-backend-production.up.railway.app/api"
   NEXT_PUBLIC_APP_ENV = "production"
+  NEXT_PUBLIC_DEFAULT_CURRENCY = "UAH"
+  NEXT_PUBLIC_DEFAULT_LOCALE = "uk-UA"
+  NEXT_PUBLIC_LIQPAY_PUBLIC_KEY = "sandbox_i74424594321"
+  NEXT_PUBLIC_LIQPAY_SANDBOX = "true"
+  NEXT_PUBLIC_APP_NAME = "FitnessPro"
+  NEXT_PUBLIC_APP_DESCRIPTION = "Платформа для фітнес-тренерів та клієнтів"
+  NEXT_PUBLIC_PLAN_BASIC = "499"
+  NEXT_PUBLIC_PLAN_PRO = "1299"
+  NEXT_PUBLIC_PLAN_PREMIUM = "2499"
+
+# Branch deploy previews
+[context.branch-deploy.environment]
+  NEXT_PUBLIC_API_URL = "https://fitnesspro-backend-production.up.railway.app/api"
+  NEXT_PUBLIC_APP_ENV = "staging"

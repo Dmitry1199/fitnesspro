@@ -1,0 +1,414 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model for fitness trainer SaaS platform
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  firstName        String?
+  lastName         String?
+  profilePicture   String?
+  role             String @default("CLIENT")
+  isActive         Boolean  @default(true)
+  lastLoginAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // Additional user profile fields for fitness platform
+  phoneNumber      String?
+  dateOfBirth      DateTime?
+  gender           String?
+
+  // Fitness specific fields
+  fitnessGoals     String?
+  experienceLevel  String @default("BEGINNER")
+  preferredWorkoutTime String?
+
+  // Address information
+  address          String?
+  city             String?
+  country          String?
+  postalCode       String?
+
+  // LiqPay and subscription fields
+  liqpayCustomerId    String?  @unique
+  subscriptionPlan    String?  // basic, pro, premium
+  subscriptionStatus  String?  // active, canceled, past_due, etc.
+
+  // Workout relationships
+  createdWorkouts     Workout[]     @relation("WorkoutCreator")
+  createdWorkoutPlans WorkoutPlan[] @relation("WorkoutPlanCreator")
+  assignedWorkoutPlans WorkoutPlan[] @relation("WorkoutPlanAssignee")
+  createdExercises    Exercise[]    @relation("ExerciseCreator")
+
+  // Session relationships - Trainer
+  trainerAvailability TrainerAvailability[] @relation("TrainerAvailability")
+  providedSessions    TrainingSession[]     @relation("SessionTrainer")
+
+  // Session relationships - Client
+  bookedSessions      TrainingSession[]     @relation("SessionClient")
+  sessionBookings     SessionBooking[]      @relation("BookingClient")
+
+  // Payment relationships
+  clientPayments      Payment[]       @relation("ClientPayments")
+  trainerPayments     Payment[]       @relation("TrainerPayments")
+  subscriptions       Subscription[]  @relation("UserSubscriptions")
+
+  @@map("users")
+}
+
+// Trainer Availability Management
+model TrainerAvailability {
+  id          String @id @default(uuid())
+  trainerId   String
+  trainer     User   @relation("TrainerAvailability", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  dayOfWeek   Int    // 0-6 (Sunday-Saturday)
+  startTime   String // HH:MM format (e.g., "09:00")
+  endTime     String // HH:MM format (e.g., "17:00")
+  isRecurring Boolean @default(true)
+
+  // Specific date override (optional)
+  specificDate DateTime?
+  isAvailable  Boolean @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([trainerId, dayOfWeek, startTime])
+  @@map("trainer_availability")
+}
+
+// Training Session
+model TrainingSession {
+  id              String   @id @default(uuid())
+  trainerId       String
+  trainer         User     @relation("SessionTrainer", fields: [trainerId], references: [id], onDelete: Cascade)
+  clientId        String?
+  client          User?    @relation("SessionClient", fields: [clientId], references: [id], onDelete: SetNull)
+
+  title           String
+  description     String?
+  sessionDate     DateTime
+  startTime       String   // HH:MM format
+  endTime         String   // HH:MM format
+  duration        Int      // in minutes
+
+  sessionType     String   @default("PERSONAL") // PERSONAL, GROUP, ONLINE
+  status          String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, NO_SHOW
+  location        String?  // gym location or online link
+
+  // Session content
+  workoutPlanId   String?
+  workoutPlan     WorkoutPlan? @relation(fields: [workoutPlanId], references: [id], onDelete: SetNull)
+  notes           String?      // trainer notes
+  clientNotes     String?      // client feedback
+
+  // Pricing
+  price           Float?
+  currency        String @default("USD")
+  paymentStatus   String @default("PENDING") // PENDING, PAID, REFUNDED
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Related bookings and payments
+  booking         SessionBooking?
+  payments        Payment[]
+
+  @@map("training_sessions")
+}
+
+// Session Booking System
+model SessionBooking {
+  id              String   @id @default(uuid())
+  sessionId       String   @unique
+  session         TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  clientId        String
+  client          User     @relation("BookingClient", fields: [clientId], references: [id], onDelete: Cascade)
+
+  bookingStatus   String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED, COMPLETED
+  bookingDate     DateTime @default(now())
+
+  // Cancellation
+  cancellationDate     DateTime?
+  cancellationReason   String?
+  cancelledBy          String? // CLIENT, TRAINER, SYSTEM
+
+  // Confirmation
+  confirmedAt          DateTime?
+  confirmedBy          String? // trainer ID
+
+  // Payment
+  paymentId            String?  @unique
+  payment              Payment? @relation(fields: [paymentId], references: [id])
+
+  // Communication
+  clientMessage        String? // message from client when booking
+  trainerResponse      String? // trainer's response
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([sessionId, clientId])
+  @@map("session_bookings")
+}
+
+// Exercise Categories
+model ExerciseCategory {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String?
+  iconUrl     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  exercises Exercise[]
+
+  @@map("exercise_categories")
+}
+
+// Muscle Groups
+model MuscleGroup {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  exercises Exercise[] @relation("ExerciseMuscleGroups")
+
+  @@map("muscle_groups")
+}
+
+// Equipment
+model Equipment {
+  id          String @id @default(uuid())
+  name        String @unique
+  description String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  exercises Exercise[] @relation("ExerciseEquipment")
+
+  @@map("equipment")
+}
+
+// Exercise Library
+model Exercise {
+  id              String @id @default(uuid())
+  name            String
+  description     String?
+  instructions    String?
+  difficultyLevel String @default("BEGINNER")
+  duration        Int? // in seconds
+  caloriesPerMin  Int? // estimated calories burned per minute
+  imageUrl        String?
+  videoUrl        String?
+  isCustom        Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relationships
+  categoryId      String
+  category        ExerciseCategory @relation(fields: [categoryId], references: [id])
+  createdById     String?
+  createdBy       User? @relation("ExerciseCreator", fields: [createdById], references: [id])
+
+  // Many-to-many relationships
+  muscleGroups    MuscleGroup[] @relation("ExerciseMuscleGroups")
+  equipment       Equipment[] @relation("ExerciseEquipment")
+  workoutExercises WorkoutExercise[]
+
+  @@map("exercises")
+}
+
+// Workout (single training session)
+model Workout {
+  id              String @id @default(uuid())
+  name            String
+  description     String?
+  estimatedDuration Int? // in minutes
+  difficultyLevel String @default("BEGINNER")
+  calories        Int? // estimated total calories
+  isTemplate      Boolean @default(false)
+  isPublic        Boolean @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relationships
+  createdById     String
+  createdBy       User @relation("WorkoutCreator", fields: [createdById], references: [id])
+
+  exercises       WorkoutExercise[]
+  workoutPlans    WorkoutPlanWorkout[]
+
+  @@map("workouts")
+}
+
+// Junction table for Workout and Exercise
+model WorkoutExercise {
+  id          String @id @default(uuid())
+  sets        Int?
+  reps        Int?
+  weight      Float? // in kg
+  duration    Int? // in seconds for time-based exercises
+  restTime    Int? // rest time in seconds
+  notes       String?
+  order       Int // order in workout
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  workoutId   String
+  workout     Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseId  String
+  exercise    Exercise @relation(fields: [exerciseId], references: [id])
+
+  @@unique([workoutId, exerciseId, order])
+  @@map("workout_exercises")
+}
+
+// Workout Plan (collection of workouts)
+model WorkoutPlan {
+  id              String @id @default(uuid())
+  name            String
+  description     String?
+  durationWeeks   Int? // plan duration in weeks
+  workoutsPerWeek Int?
+  difficultyLevel String @default("BEGINNER")
+  goals           String? // JSON string with goals
+  isPublic        Boolean @default(false)
+  isActive        Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relationships
+  createdById     String
+  createdBy       User @relation("WorkoutPlanCreator", fields: [createdById], references: [id])
+  assignedToId    String?
+  assignedTo      User? @relation("WorkoutPlanAssignee", fields: [assignedToId], references: [id])
+
+  workouts        WorkoutPlanWorkout[]
+  trainingSessions TrainingSession[]
+
+  @@map("workout_plans")
+}
+
+// Junction table for WorkoutPlan and Workout
+model WorkoutPlanWorkout {
+  id          String @id @default(uuid())
+  dayOfWeek   Int? // 1-7 (Monday-Sunday)
+  weekNumber  Int? // week in the plan
+  order       Int // order in the day
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  // Relationships
+  workoutPlanId String
+  workoutPlan   WorkoutPlan @relation(fields: [workoutPlanId], references: [id], onDelete: Cascade)
+  workoutId     String
+  workout       Workout @relation(fields: [workoutId], references: [id])
+
+  @@unique([workoutPlanId, workoutId, dayOfWeek, weekNumber])
+  @@map("workout_plan_workouts")
+}
+
+// Payment System Models
+model Payment {
+  id                    String @id @default(uuid())
+  sessionId             String?
+  session               TrainingSession? @relation(fields: [sessionId], references: [id])
+
+  clientId              String
+  client                User @relation("ClientPayments", fields: [clientId], references: [id])
+  trainerId             String
+  trainer               User @relation("TrainerPayments", fields: [trainerId], references: [id])
+
+  amount                Float
+  currency              String @default("USD")
+  platformFee           Float? // Platform commission
+  type                  String @default("SESSION_PAYMENT") // SESSION_PAYMENT, SUBSCRIPTION_PAYMENT
+  status                String @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+
+  // LiqPay integration
+  liqpayOrderId         String? @unique
+  liqpayTransactionId   String?
+  liqpayRefundId        String?
+
+  // Refund information
+  refundedAt            DateTime?
+  refundReason          String?
+
+  // Timestamps
+  completedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relationships
+  booking               SessionBooking?
+
+  @@map("payments")
+}
+
+// Subscription Management
+model Subscription {
+  id                    String @id @default(uuid())
+  userId                String
+  user                  User @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+
+  planId                String // basic, pro, premium
+  planName              String
+  price                 Float
+  interval              String // month, year
+  status                String @default("active") // active, canceled, past_due, trialing
+
+  // LiqPay integration
+  liqpaySubscriptionId  String? @unique
+  liqpayCustomerId      String?
+
+  // Billing cycle
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean @default(false)
+  canceledAt            DateTime?
+
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+// Webhook Events Log
+model WebhookEvent {
+  id                String @id @default(uuid())
+  stripeEventId     String @unique
+  eventType         String
+  processed         Boolean @default(false)
+  processingError   String?
+  eventData         String? // JSON data
+  createdAt         DateTime @default(now())
+
+  @@map("webhook_events")
+}
+
+// Using String types instead of enums for PostgreSQL compatibility
+// UserRole: "ADMIN", "TRAINER", "CLIENT"
+// Gender: "MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"
+// ExperienceLevel: "BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"
+// DifficultyLevel: "BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"
+// SessionType: "PERSONAL", "GROUP", "ONLINE"
+// SessionStatus: "SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"
+// BookingStatus: "PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"
+// PaymentStatus: "PENDING", "COMPLETED", "FAILED", "REFUNDED"
+// PaymentType: "SESSION_PAYMENT", "SUBSCRIPTION_PAYMENT"
+// SubscriptionStatus: "active", "canceled", "past_due", "trialing"
