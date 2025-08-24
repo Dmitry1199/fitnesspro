@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { WorkoutsModule } from './workouts/workouts.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionsModule } from './sessions/sessions.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { SessionsModule } from './sessions/sessions.module';
     WorkoutsModule,
     AuthModule,
     SessionsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

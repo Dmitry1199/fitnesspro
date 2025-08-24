@@ -457,6 +457,77 @@ class ApiClient {
   async getSessionStats() {
     return this.request('/sessions/stats');
   }
+
+  // Payment & Billing
+  async createSessionPaymentIntent(sessionId: string) {
+    return this.request('/payments/session/create-intent', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    });
+  }
+
+  async confirmSessionPayment(paymentIntentId: string) {
+    return this.request('/payments/session/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ paymentIntentId }),
+    });
+  }
+
+  async refundSessionPayment(sessionId: string, reason?: string) {
+    return this.request('/payments/session/refund', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, reason }),
+    });
+  }
+
+  async getPaymentHistory() {
+    return this.request('/payments/history');
+  }
+
+  async getPaymentStats(trainerId?: string) {
+    const params = trainerId ? `?trainerId=${trainerId}` : '';
+    return this.request(`/payments/stats${params}`);
+  }
+
+  // Subscriptions
+  async getSubscriptionPlans() {
+    return this.request('/subscriptions/plans');
+  }
+
+  async createSubscription(planId: string, paymentMethodId: string) {
+    return this.request('/subscriptions/create', {
+      method: 'POST',
+      body: JSON.stringify({ planId, paymentMethodId }),
+    });
+  }
+
+  async updateSubscription(planId: string) {
+    return this.request('/subscriptions/update', {
+      method: 'PUT',
+      body: JSON.stringify({ planId }),
+    });
+  }
+
+  async cancelSubscription(immediately: boolean = false) {
+    return this.request('/subscriptions/cancel', {
+      method: 'DELETE',
+      body: JSON.stringify({ immediately }),
+    });
+  }
+
+  async getCurrentSubscription() {
+    return this.request('/subscriptions/current');
+  }
+
+  async getSubscriptionUsage() {
+    return this.request('/subscriptions/usage');
+  }
+
+  async createBillingPortalSession() {
+    return this.request('/subscriptions/portal', {
+      method: 'POST',
+    });
+  }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

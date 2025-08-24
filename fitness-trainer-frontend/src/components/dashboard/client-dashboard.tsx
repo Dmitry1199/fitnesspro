@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { apiClient, TrainingSession, Exercise } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { SessionPaymentDialog } from '../payments/session-payment';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,6 +49,8 @@ export function ClientDashboard() {
   const [exerciseSearch, setExerciseSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [categories, setCategories] = useState<any[]>([]);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboardData();
@@ -91,14 +94,14 @@ export function ClientDashboard() {
     toast.success('Logged out successfully');
   };
 
-  const handleBookSession = async (trainerId: string) => {
-    try {
-      toast.info('Session booking functionality coming soon');
-      // This would open a booking modal/form
-    } catch (error) {
-      console.error('Failed to book session:', error);
-      toast.error('Failed to book session');
-    }
+  const handleBookSession = async (sessionId: string) => {
+    setSelectedSessionId(sessionId);
+    setShowPaymentDialog(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    toast.success('Session booked and paid successfully!');
+    loadDashboardData(); // Refresh the session data
   };
 
   const filteredTrainers = trainers.filter(trainer => {
@@ -534,6 +537,16 @@ export function ClientDashboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Session Payment Dialog */}
+      {selectedSessionId && (
+        <SessionPaymentDialog
+          sessionId={selectedSessionId}
+          open={showPaymentDialog}
+          onOpenChange={setShowPaymentDialog}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

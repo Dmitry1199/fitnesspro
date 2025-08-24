@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { WorkoutForm } from './workout-form';
 import { SessionForm } from './session-form';
+import { SubscriptionBilling } from '../payments/subscription-billing';
 import { toast } from 'sonner';
 import {
   BarChart3,
@@ -187,7 +188,7 @@ export function TrainerDashboard() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview" className="flex items-center space-x-2">
               <BarChart3 className="h-4 w-4" />
               <span>Overview</span>
@@ -203,6 +204,10 @@ export function TrainerDashboard() {
             <TabsTrigger value="exercises" className="flex items-center space-x-2">
               <BookOpen className="h-4 w-4" />
               <span>Exercises</span>
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center space-x-2">
+              <TrendingUp className="h-4 w-4" />
+              <span>Billing</span>
             </TabsTrigger>
             <TabsTrigger value="clients" className="flex items-center space-x-2">
               <Users className="h-4 w-4" />
@@ -547,6 +552,20 @@ export function TrainerDashboard() {
                 </Card>
               ))}
             </div>
+          </TabsContent>
+
+          {/* Billing Tab */}
+          <TabsContent value="billing" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-medium">Subscription & Billing</h3>
+                <p className="text-sm text-muted-foreground">
+                  Manage your subscription plan and billing
+                </p>
+              </div>
+            </div>
+
+            <SubscriptionBilling />
           </TabsContent>
 
           {/* Clients Tab */}

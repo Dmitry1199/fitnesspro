@@ -39,6 +39,12 @@ model User {
   country          String?
   postalCode       String?
 
+  // Stripe and subscription fields
+  stripeCustomerId    String?  @unique
+  stripeAccountId     String?  @unique // For trainers using Stripe Connect
+  subscriptionPlan    String?  // basic, pro, premium
+  subscriptionStatus  String?  // active, canceled, past_due, etc.
+
   // Workout relationships
   createdWorkouts     Workout[]     @relation("WorkoutCreator")
   createdWorkoutPlans WorkoutPlan[] @relation("WorkoutPlanCreator")
@@ -52,6 +58,11 @@ model User {
   // Session relationships - Client
   bookedSessions      TrainingSession[]     @relation("SessionClient")
   sessionBookings     SessionBooking[]      @relation("BookingClient")
+
+  // Payment relationships
+  clientPayments      Payment[]       @relation("ClientPayments")
+  trainerPayments     Payment[]       @relation("TrainerPayments")
+  subscriptions       Subscription[]  @relation("UserSubscriptions")
 
   @@map("users")
 }
@@ -111,8 +122,9 @@ model TrainingSession {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  // Related bookings
+  // Related bookings and payments
   booking         SessionBooking?
+  payments        Payment[]
 
   @@map("training_sessions")
 }
@@ -139,8 +151,8 @@ model SessionBooking {
   confirmedBy          String? // trainer ID
 
   // Payment
-  paymentIntentId      String?
-  paymentMethod        String?
+  paymentId            String?  @unique
+  payment              Payment? @relation(fields: [paymentId], references: [id])
 
   // Communication
   clientMessage        String? // message from client when booking
@@ -149,6 +161,7 @@ model SessionBooking {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  @@unique([sessionId, clientId])
   @@map("session_bookings")
 }
 
@@ -310,7 +323,86 @@ model WorkoutPlanWorkout {
   @@map("workout_plan_workouts")
 }
 
-// Using String types instead of enums for SQLite compatibility
+// Payment System Models
+model Payment {
+  id                    String @id @default(uuid())
+  sessionId             String?
+  session               TrainingSession? @relation(fields: [sessionId], references: [id])
+
+  clientId              String
+  client                User @relation("ClientPayments", fields: [clientId], references: [id])
+  trainerId             String
+  trainer               User @relation("TrainerPayments", fields: [trainerId], references: [id])
+
+  amount                Float
+  currency              String @default("USD")
+  platformFee           Float? // Platform commission
+  type                  String @default("SESSION_PAYMENT") // SESSION_PAYMENT, SUBSCRIPTION_PAYMENT
+  status                String @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+
+  // Stripe integration
+  stripePaymentIntentId String? @unique
+  stripeChargeId        String?
+  stripeRefundId        String?
+
+  // Refund information
+  refundedAt            DateTime?
+  refundReason          String?
+
+  // Timestamps
+  completedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relationships
+  booking               SessionBooking?
+
+  @@map("payments")
+}
+
+// Subscription Management
+model Subscription {
+  id                    String @id @default(uuid())
+  userId                String
+  user                  User @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+
+  planId                String // basic, pro, premium
+  planName              String
+  price                 Float
+  interval              String // month, year
+  status                String @default("active") // active, canceled, past_due, trialing
+
+  // Stripe integration
+  stripeSubscriptionId  String @unique
+  stripeCustomerId      String
+
+  // Billing cycle
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean @default(false)
+  canceledAt            DateTime?
+
+  // Timestamps
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+// Webhook Events Log
+model WebhookEvent {
+  id                String @id @default(uuid())
+  stripeEventId     String @unique
+  eventType         String
+  processed         Boolean @default(false)
+  processingError   String?
+  eventData         String? // JSON data
+  createdAt         DateTime @default(now())
+
+  @@map("webhook_events")
+}
+
+// Using String types instead of enums for PostgreSQL compatibility
 // UserRole: "ADMIN", "TRAINER", "CLIENT"
 // Gender: "MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"
 // ExperienceLevel: "BEGINNER", "INTERMEDIATE", "ADVANCED", "EXPERT"
@@ -318,4 +410,6 @@ model WorkoutPlanWorkout {
 // SessionType: "PERSONAL", "GROUP", "ONLINE"
 // SessionStatus: "SCHEDULED", "COMPLETED", "CANCELLED", "NO_SHOW"
 // BookingStatus: "PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"
-// PaymentStatus: "PENDING", "PAID", "REFUNDED"
+// PaymentStatus: "PENDING", "COMPLETED", "FAILED", "REFUNDED"
+// PaymentType: "SESSION_PAYMENT", "SUBSCRIPTION_PAYMENT"
+// SubscriptionStatus: "active", "canceled", "past_due", "trialing"
